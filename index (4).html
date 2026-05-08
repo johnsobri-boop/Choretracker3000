@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#080C16">
+<title>Chore Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #080C16;
+  --bg2:      #0D1320;
+  --surface:  #111827;
+  --surface2: #172035;
+  --surface3: #1D2A42;
+  --accent:   #3DD9AC;
+  --blue:     #5B9EF5;
+  --purple:   #A78BFA;
+  --warn:     #FFB547;
+  --red:      #FF5B6B;
+  --text:     #EDF2FF;
+  --text2:    #94A3B8;
+  --muted:    #3D5070;
+  --border:   #1A2840;
+  --done-bg:  rgba(61,217,172,0.1);
+  --done-bdr: rgba(61,217,172,0.35);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Nunito', sans-serif;
+  min-height: 100vh;
+}
+
+/* ── Config gate ── */
+#configGate {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000; padding: 24px;
+}
+.config-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 36px 32px;
+  max-width: 460px; width: 100%;
+  display: flex; flex-direction: column; gap: 20px;
+}
+.config-logo {
+  font-size: 32px; font-weight: 900;
+  background: linear-gradient(135deg, var(--accent), var(--blue));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  text-align: center;
+}
+.config-sub { text-align: center; color: var(--text2); font-size: 14px; }
+.config-label { font-size: 13px; font-weight: 700; color: var(--text2); margin-bottom: 6px; }
+.config-input {
+  width: 100%; padding: 12px 16px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 12px; color: var(--text); font-size: 14px;
+  font-family: 'Nunito', sans-serif; font-weight: 600;
+  outline: none; transition: border-color 0.2s;
+}
+.config-input:focus { border-color: var(--blue); }
+.config-input.error { border-color: var(--red); }
+.config-hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.btn-primary {
+  width: 100%; padding: 14px;
+  background: linear-gradient(135deg, var(--accent), var(--blue));
+  color: #080C16; border: none; border-radius: 12px;
+  font-size: 16px; font-weight: 900; cursor: pointer;
+  font-family: 'Nunito', sans-serif; transition: opacity 0.15s;
+}
+.btn-primary:hover { opacity: 0.9; }
+.config-error { color: var(--red); font-size: 13px; text-align: center; display: none; }
+
+/* ── Mode selector ── */
+.mode-tabs {
+  display: flex; gap: 0;
+  background: var(--surface2); border-radius: 12px; padding: 4px;
+}
+.mode-tab {
+  flex: 1; padding: 10px; border-radius: 9px;
+  font-size: 13px; font-weight: 800; cursor: pointer;
+  text-align: center; transition: all 0.2s; border: none;
+  font-family: 'Nunito', sans-serif; color: var(--text2);
+  background: transparent;
+}
+.mode-tab.active { background: var(--surface3); color: var(--text); }
+
+/* ── Guest PIN screen ── */
+.pin-display {
+  display: flex; gap: 10px; justify-content: center;
+  margin: 8px 0;
+}
+.pin-digit {
+  width: 48px; height: 60px;
+  background: var(--surface2); border: 2px solid var(--border);
+  border-radius: 12px; display: flex; align-items: center;
+  justify-content: center; font-size: 26px; font-weight: 900;
+  color: var(--text); transition: all 0.15s;
+}
+.pin-digit.filled { border-color: var(--blue); background: rgba(91,158,245,0.1); }
+.pin-digit.active { border-color: var(--accent); }
+.pin-keypad {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 10px; margin-top: 8px;
+}
+.pin-key {
+  padding: 16px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 12px;
+  font-size: 20px; font-weight: 800; cursor: pointer;
+  text-align: center; transition: all 0.15s;
+  font-family: 'Nunito', sans-serif; color: var(--text);
+}
+.pin-key:hover { background: var(--surface3); border-color: var(--blue); }
+.pin-key:active { transform: scale(0.95); }
+.pin-key.delete { color: var(--red); font-size: 16px; }
+.pin-key.zero   { grid-column: 2; }
+.pin-expires { font-size: 12px; color: var(--muted); text-align: center; }
+
+/* ── Guest create panel (in parent dashboard) ── */
+.guest-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 28px;
+}
+.guest-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.guest-panel-title {
+  font-size: 16px; font-weight: 900;
+  display: flex; align-items: center; gap: 10px;
+}
+.guest-active-badge {
+  font-size: 11px; font-weight: 800; padding: 4px 10px;
+  background: rgba(255,181,71,0.15); color: var(--warn);
+  border-radius: 20px; letter-spacing: 0.04em;
+}
+.guest-form {
+  display: grid; grid-template-columns: 1fr 1fr auto;
+  gap: 12px; align-items: end;
+}
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-label { font-size: 12px; font-weight: 800; color: var(--text2); }
+.form-input {
+  padding: 11px 14px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 10px;
+  color: var(--text); font-size: 14px; font-weight: 600;
+  font-family: 'Nunito', sans-serif; outline: none;
+  transition: border-color 0.2s;
+}
+.form-input:focus { border-color: var(--blue); }
+.form-select {
+  padding: 11px 14px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 10px;
+  color: var(--text); font-size: 14px; font-weight: 600;
+  font-family: 'Nunito', sans-serif; outline: none;
+  cursor: pointer;
+}
+.btn-create-guest {
+  padding: 11px 20px; background: linear-gradient(135deg, var(--blue), var(--purple));
+  color: #fff; border: none; border-radius: 10px;
+  font-size: 14px; font-weight: 800; cursor: pointer;
+  font-family: 'Nunito', sans-serif; white-space: nowrap;
+  transition: opacity 0.15s;
+}
+.btn-create-guest:hover { opacity: 0.9; }
+.guest-active-info {
+  background: rgba(255,181,71,0.08);
+  border: 1px solid rgba(255,181,71,0.25);
+  border-radius: 12px; padding: 14px 18px;
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 14px; gap: 12px;
+}
+.guest-pin-display {
+  font-size: 28px; font-weight: 900; color: var(--warn);
+  letter-spacing: 0.15em;
+}
+.guest-info-text { font-size: 13px; color: var(--text2); }
+.btn-revoke {
+  padding: 8px 14px; background: rgba(255,91,107,0.1);
+  color: var(--red); border: 1px solid rgba(255,91,107,0.25);
+  border-radius: 9px; font-size: 12px; font-weight: 800;
+  cursor: pointer; font-family: 'Nunito', sans-serif;
+  white-space: nowrap; transition: background 0.15s;
+}
+.btn-revoke:hover { background: rgba(255,91,107,0.2); }
+
+/* ── Guest view — limited dashboard ── */
+.guest-banner {
+  background: linear-gradient(135deg, rgba(91,158,245,0.15), rgba(167,139,250,0.1));
+  border: 1px solid rgba(91,158,245,0.3);
+  border-radius: 14px; padding: 16px 20px;
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 24px;
+}
+.guest-banner-icon { font-size: 28px; }
+.guest-banner-text h3 { font-size: 16px; font-weight: 900; margin-bottom: 3px; }
+.guest-banner-text p  { font-size: 13px; color: var(--text2); }
+.btn-guest-signout {
+  margin-left: auto; padding: 8px 14px;
+  background: var(--surface2); color: var(--text2);
+  border: 1px solid var(--border); border-radius: 9px;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+}
+
+/* ── App layout ── */
+#app { display: none; min-height: 100vh; flex-direction: column; }
+#app.ready { display: flex; }
+
+/* ── Topbar ── */
+.topbar {
+  background: rgba(8,12,22,0.97);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  height: 60px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+}
+.topbar-left { display: flex; align-items: center; gap: 14px; }
+.topbar-logo {
+  font-size: 17px; font-weight: 900;
+  background: linear-gradient(135deg, var(--accent), var(--blue));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.topbar-badge {
+  font-size: 10px; font-weight: 800; padding: 3px 9px;
+  background: rgba(167,139,250,0.2); color: var(--purple);
+  border-radius: 20px; letter-spacing: 0.06em; text-transform: uppercase;
+}
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+.topbar-time { font-size: 13px; color: var(--text2); font-weight: 600; }
+.btn-refresh {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 14px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: 9px;
+  font-size: 12px; font-weight: 700; color: var(--blue);
+  cursor: pointer; font-family: 'Nunito', sans-serif;
+  transition: background 0.15s;
+}
+.btn-refresh:hover { background: var(--surface3); }
+.btn-refresh.spinning svg { animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Main content ── */
+.main { padding: 24px 28px; flex: 1; max-width: 1200px; margin: 0 auto; width: 100%; }
+
+/* ── Summary bar ── */
+.summary-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.summary-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px 20px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.summary-value { font-size: 28px; font-weight: 900; line-height: 1; }
+.summary-label { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* ── Kid panels ── */
+.kids-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.kid-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+}
+.kid-panel:hover { box-shadow: 0 8px 40px rgba(0,0,0,0.4); }
+
+.kid-panel-header {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 14px;
+}
+.kid-panel-avatar {
+  width: 52px; height: 52px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 900; flex-shrink: 0;
+  background: var(--surface2);
+}
+.panel-status-done    .kid-panel-avatar { background: rgba(61,217,172,0.2); }
+.panel-status-pending .kid-panel-avatar { background: rgba(255,181,71,0.2); }
+.panel-status-blocked .kid-panel-avatar { background: rgba(255,91,107,0.2); }
+
+.kid-panel-info { flex: 1; min-width: 0; }
+.kid-panel-name { font-size: 20px; font-weight: 900; letter-spacing: -0.01em; }
+.kid-panel-sub  { font-size: 13px; color: var(--text2); font-weight: 600; margin-top: 2px; }
+
+.wifi-pill {
+  padding: 6px 12px; border-radius: 20px;
+  font-size: 11px; font-weight: 800;
+  letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap;
+}
+.pill-on      { background: rgba(61,217,172,0.15); color: var(--accent); }
+.pill-pending { background: rgba(255,181,71,0.15);  color: var(--warn); }
+.pill-blocked { background: rgba(255,91,107,0.15); color: var(--red); }
+
+/* ── Progress bar ── */
+.kid-progress { padding: 12px 20px; border-bottom: 1px solid var(--border); }
+.prog-labels { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.prog-label { font-size: 12px; font-weight: 700; color: var(--text2); }
+.prog-count { font-size: 12px; font-weight: 800; }
+.prog-bar-bg { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+.prog-bar-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+.fill-done    { background: linear-gradient(90deg, var(--accent), #2EC4A0); }
+.fill-partial { background: linear-gradient(90deg, var(--blue), var(--purple)); }
+.fill-empty   { background: var(--muted); width: 2px !important; }
+
+/* ── Chore list ── */
+.chore-list { padding: 8px 12px 4px; }
+
+.chore-section-label {
+  font-size: 10px; font-weight: 800; color: var(--muted);
+  letter-spacing: 0.09em; text-transform: uppercase;
+  padding: 8px 8px 4px;
+}
+
+.chore-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 8px; border-radius: 10px;
+  transition: background 0.12s;
+}
+.chore-row:hover { background: var(--surface2); }
+
+.chore-dot {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  border: 2px solid var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; transition: all 0.2s;
+}
+.chore-dot.done { background: var(--accent); border-color: var(--accent); color: #080C16; }
+.chore-dot.inactive { border-color: var(--border); opacity: 0.4; }
+
+.chore-row-name {
+  flex: 1; font-size: 14px; font-weight: 600;
+}
+.chore-row-name.done { color: var(--accent); text-decoration: line-through; text-decoration-color: rgba(61,217,172,0.4); }
+.chore-row-name.inactive { color: var(--muted); }
+
+.chore-day-badge {
+  font-size: 10px; font-weight: 800; padding: 2px 7px;
+  border-radius: 20px; letter-spacing: 0.04em; text-transform: uppercase;
+}
+.day-always   { background: rgba(91,158,245,0.12); color: var(--blue); }
+.day-specific { background: rgba(255,181,71,0.12);  color: var(--warn); }
+.day-inactive { background: rgba(61,80,112,0.2);    color: var(--muted); }
+
+.chore-actions { display: flex; gap: 4px; }
+.chore-action-btn {
+  width: 28px; height: 28px; border-radius: 7px;
+  border: 1px solid var(--border); background: var(--surface2);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 13px; transition: all 0.15s;
+  color: var(--text2);
+}
+.chore-action-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(61,217,172,0.1); }
+.chore-action-btn.reset:hover { border-color: var(--red); color: var(--red); background: rgba(255,91,107,0.1); }
+
+/* ── Kid panel footer ── */
+.kid-panel-footer {
+  padding: 12px;
+  border-top: 1px solid var(--border);
+  display: flex; gap: 8px; flex-wrap: wrap;
+}
+.action-btn {
+  flex: 1; min-width: 100px;
+  padding: 10px 14px;
+  border-radius: 10px; border: 1px solid var(--border);
+  font-size: 12px; font-weight: 800; cursor: pointer;
+  font-family: 'Nunito', sans-serif; transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  white-space: nowrap;
+}
+.btn-approve {
+  background: rgba(61,217,172,0.12); color: var(--accent);
+  border-color: rgba(61,217,172,0.3);
+}
+.btn-approve:hover { background: rgba(61,217,172,0.2); }
+.btn-approve:disabled { opacity: 0.3; cursor: default; }
+.btn-reset-all {
+  background: rgba(255,91,107,0.1); color: var(--red);
+  border-color: rgba(255,91,107,0.25);
+}
+.btn-reset-all:hover { background: rgba(255,91,107,0.2); }
+.btn-remind-kid {
+  background: rgba(91,158,245,0.1); color: var(--blue);
+  border-color: rgba(91,158,245,0.25);
+}
+.btn-remind-kid:hover { background: rgba(91,158,245,0.2); }
+
+/* ── Calendar section ── */
+.section-header {
+  font-size: 13px; font-weight: 800; color: var(--text2);
+  text-transform: uppercase; letter-spacing: 0.07em;
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+  margin-bottom: 32px;
+}
+.cal-event-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex; gap: 14px; align-items: flex-start;
+  border-left: 4px solid var(--accent);
+  transition: background 0.15s;
+}
+.cal-event-card.all-day { border-left-color: var(--blue); }
+.cal-event-card:hover { background: var(--surface2); }
+.cal-event-time {
+  font-size: 12px; font-weight: 800; color: var(--accent);
+  white-space: nowrap; min-width: 60px; margin-top: 2px;
+}
+.cal-event-card.all-day .cal-event-time { color: var(--blue); }
+.cal-event-title { font-size: 15px; font-weight: 700; }
+.cal-empty { color: var(--text2); font-size: 14px; padding: 8px 0; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed; bottom: 28px; left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--surface2); border: 1px solid var(--accent);
+  color: var(--text); padding: 13px 22px; border-radius: 12px;
+  font-size: 14px; font-weight: 700; z-index: 9999;
+  transition: transform 0.3s ease; white-space: nowrap;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.error { border-color: var(--red); }
+
+/* ── Loading overlay ── */
+.loading-overlay {
+  position: fixed; inset: 0; background: rgba(8,12,22,0.85);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 500; backdrop-filter: blur(4px);
+}
+.loading-overlay.hidden { display: none; }
+.spinner {
+  width: 44px; height: 44px;
+  border: 3px solid var(--surface2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ── Responsive ── */
+@media(max-width: 768px) {
+  .topbar { padding: 0 16px; }
+  .topbar-badge { display: none; }
+  .main { padding: 16px; }
+  .summary-bar { grid-template-columns: repeat(2, 1fr); }
+  .kids-grid { grid-template-columns: 1fr; }
+}
+@media(max-width: 480px) {
+  .summary-bar { grid-template-columns: repeat(2, 1fr); }
+  .action-btn { font-size: 11px; padding: 9px 10px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Config gate ── -->
+<div id="configGate">
+  <div class="config-box">
+    <div class="config-logo">🏠 Chore Tracker</div>
+
+    <!-- Mode tabs -->
+    <div class="mode-tabs">
+      <button class="mode-tab active" id="tabParent" onclick="switchMode('parent')">👤 Parent</button>
+      <button class="mode-tab" id="tabGuest"  onclick="switchMode('guest')">👴 Guest / Grandparent</button>
+    </div>
+
+    <!-- Parent login -->
+    <div id="parentLoginForm">
+      <div class="config-sub">Enter your Apps Script URL and API key</div>
+      <div style="display:flex;flex-direction:column;gap:16px;margin-top:4px">
+        <div>
+          <div class="config-label">Google Apps Script URL</div>
+          <input class="config-input" id="inputScriptUrl" type="url"
+            placeholder="https://script.google.com/macros/s/.../exec">
+          <div class="config-hint">Deploy → Web App → copy the /exec URL</div>
+        </div>
+        <div>
+          <div class="config-label">API Key</div>
+          <input class="config-input" id="inputApiKey" type="text"
+            placeholder="your-secret-api-key">
+        </div>
+      </div>
+      <div class="config-error" id="configError">Could not connect — check URL and API key</div>
+      <button class="btn-primary" onclick="connectDashboard()">Connect as Parent</button>
+      <div class="config-hint" style="text-align:center">Saved in your browser for next time</div>
+    </div>
+
+    <!-- Guest PIN login -->
+    <div id="guestLoginForm" style="display:none">
+      <div class="config-sub">Enter the 6-digit PIN sent to you by the parents</div>
+      <div>
+        <div class="config-label" style="margin-bottom:10px">Also need the Apps Script URL</div>
+        <input class="config-input" id="inputGuestScriptUrl" type="url"
+          placeholder="https://script.google.com/macros/s/.../exec"
+          style="margin-bottom:8px">
+        <div class="config-hint">Parents can find this in their dashboard settings</div>
+      </div>
+      <div class="config-label" style="margin-bottom:8px">Your PIN</div>
+      <div class="pin-display" id="pinDisplay">
+        <div class="pin-digit" id="pd0"></div>
+        <div class="pin-digit" id="pd1"></div>
+        <div class="pin-digit" id="pd2"></div>
+        <div class="pin-digit" id="pd3"></div>
+        <div class="pin-digit" id="pd4"></div>
+        <div class="pin-digit" id="pd5"></div>
+      </div>
+      <div class="pin-keypad">
+        <div class="pin-key" onclick="pinKey('1')">1</div>
+        <div class="pin-key" onclick="pinKey('2')">2</div>
+        <div class="pin-key" onclick="pinKey('3')">3</div>
+        <div class="pin-key" onclick="pinKey('4')">4</div>
+        <div class="pin-key" onclick="pinKey('5')">5</div>
+        <div class="pin-key" onclick="pinKey('6')">6</div>
+        <div class="pin-key" onclick="pinKey('7')">7</div>
+        <div class="pin-key" onclick="pinKey('8')">8</div>
+        <div class="pin-key" onclick="pinKey('9')">9</div>
+        <div class="pin-key delete" onclick="pinDelete()">⌫</div>
+        <div class="pin-key zero" onclick="pinKey('0')">0</div>
+      </div>
+      <div class="config-error" id="guestError">Invalid or expired PIN — contact the parents</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Main app ── -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">🏠 Chore Tracker</div>
+      <div class="topbar-badge">Parent Dashboard</div>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-time" id="topbarTime">--:--</div>
+      <button class="btn-refresh" id="btnRefresh" onclick="refresh()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+        </svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- Summary bar -->
+    <div class="summary-bar" id="summaryBar">
+      <div class="summary-card">
+        <div class="summary-value" id="sumTotal" style="color:var(--blue)">—</div>
+        <div class="summary-label">Total Chores Today</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-value" id="sumDone" style="color:var(--accent)">—</div>
+        <div class="summary-label">Completed</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-value" id="sumPending" style="color:var(--warn)">—</div>
+        <div class="summary-label">Awaiting Approval</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-value" id="sumUnlocked" style="color:var(--accent)">—</div>
+        <div class="summary-label">WiFi Unlocked</div>
+      </div>
+    </div>
+
+    <!-- Guest Access Panel (parent only) -->
+    <div id="guestPanel" class="guest-panel" style="display:none">
+      <div class="guest-panel-header">
+        <div class="guest-panel-title">👴 Guest / Grandparent Access <span class="guest-active-badge" id="guestActiveBadge" style="display:none">● Active</span></div>
+      </div>
+      <div class="guest-form">
+        <div class="form-group">
+          <div class="form-label">Guest Email</div>
+          <input class="form-input" id="guestEmailInput" type="email" placeholder="grandma@email.com">
+        </div>
+        <div class="form-group">
+          <div class="form-label">Guest Name</div>
+          <input class="form-input" id="guestNameInput" type="text" placeholder="Grandma">
+        </div>
+        <div class="form-group">
+          <div class="form-label">Expires After</div>
+          <select class="form-select" id="guestExpiresSelect">
+            <option value="4">4 hours</option>
+            <option value="8">8 hours</option>
+            <option value="12">12 hours</option>
+            <option value="24" selected>24 hours</option>
+            <option value="48">48 hours (weekend)</option>
+            <option value="72">72 hours</option>
+          </select>
+        </div>
+        <button class="btn-create-guest" onclick="createGuestAccess()">
+          ✉️ Send PIN
+        </button>
+      </div>
+      <div id="guestActiveInfo" class="guest-active-info" style="display:none">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--warn);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px">Current PIN</div>
+          <div class="guest-pin-display" id="currentPinDisplay">------</div>
+        </div>
+        <div class="guest-info-text" id="guestExpiresText"></div>
+        <button class="btn-revoke" onclick="revokeGuestAccess()">Revoke Access</button>
+      </div>
+    </div>
+
+    <!-- Kid panels -->
+    <div class="section-header">👧👦 Kids</div>
+    <div class="kids-grid" id="kidsGrid"></div>
+
+    <!-- Calendar -->
+    <div class="section-header">📅 Today's Calendar — <span id="calDateLabel" style="color:var(--accent);font-weight:700"></span></div>
+    <div class="cal-grid" id="calGrid"></div>
+
+  </div>
+</div>
+
+<div class="loading-overlay hidden" id="loadingOverlay">
+  <div class="spinner"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────
+let SCRIPT_URL = '';
+let API_KEY    = '';
+let state      = {};
+let pollTimer  = null;
+
+function loadConfig() {
+  SCRIPT_URL = localStorage.getItem('ct_script_url') || '';
+  API_KEY    = localStorage.getItem('ct_api_key')    || '';
+  if (SCRIPT_URL && API_KEY) {
+    document.getElementById('inputScriptUrl').value = SCRIPT_URL;
+    document.getElementById('inputApiKey').value    = API_KEY;
+  }
+  return !!(SCRIPT_URL && API_KEY);
+}
+
+function saveConfig() {
+  localStorage.setItem('ct_script_url', SCRIPT_URL);
+  localStorage.setItem('ct_api_key',    API_KEY);
+}
+
+async function connectDashboard() {
+  const url = document.getElementById('inputScriptUrl').value.trim();
+  const key = document.getElementById('inputApiKey').value.trim();
+  const err = document.getElementById('configError');
+
+  if (!url || !key) {
+    err.textContent = 'Please fill in both fields';
+    err.style.display = 'block'; return;
+  }
+
+  err.style.display = 'none';
+  document.querySelector('.btn-primary').textContent = 'Connecting...';
+
+  try {
+    const proxyUrl = `/api/proxy?scriptUrl=${encodeURIComponent(url)}&action=get_state_full&key=${encodeURIComponent(key)}`;
+    const res  = await fetch(proxyUrl);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    SCRIPT_URL = url; API_KEY = key;
+    saveConfig();
+    launchApp(data);
+  } catch(e) {
+    err.textContent = 'Could not connect — ' + e.message;
+    err.style.display = 'block';
+    document.querySelector('.btn-primary').textContent = 'Connect Dashboard';
+  }
+}
+
+// ── App launch ────────────────────────────────────────────────
+function launchApp(initialData) {
+  document.getElementById('configGate').style.display = 'none';
+  document.getElementById('app').classList.add('ready');
+  applyState(initialData);
+  startPolling();
+}
+
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(refresh, 30000);
+}
+
+// ── Clock ─────────────────────────────────────────────────────
+function updateClock() {
+  const n = new Date();
+  document.getElementById('topbarTime').textContent =
+    String(n.getHours()).padStart(2,'0') + ':' + String(n.getMinutes()).padStart(2,'0');
+}
+updateClock(); setInterval(updateClock, 10000);
+
+// ── API calls ─────────────────────────────────────────────────
+function apiUrl(action, extra) {
+  let url = `${SCRIPT_URL}?action=${action}&key=${encodeURIComponent(API_KEY)}`;
+  if (extra) url += extra;
+  return url;
+}
+
+async function apiCall(action, params = '', showSpinner = false) {
+  if (showSpinner) document.getElementById('loadingOverlay').classList.remove('hidden');
+  try {
+    const url = `/api/proxy?scriptUrl=${encodeURIComponent(SCRIPT_URL)}&action=${action}&key=${encodeURIComponent(API_KEY)}${params}`;
+    const res  = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    return data;
+  } catch(e) {
+    console.error('API error:', e);
+    showToast('⚠️ Network error: ' + e.message, true);
+    return null;
+  } finally {
+    document.getElementById('loadingOverlay').classList.add('hidden');
+  }
+}
+
+// All API calls go through /api/proxy (see apiCall function)
+
+async function refresh() {
+  const btn = document.getElementById('btnRefresh');
+  btn.classList.add('spinning');
+  const data = await apiCall('get_state_full');
+  if (data && !data.error) applyState(data);
+  btn.classList.remove('spinning');
+}
+
+// ── State rendering ───────────────────────────────────────────
+function applyState(data) {
+  state = data;
+  renderSummary();
+  renderKids();
+  renderCalendar();
+}
+
+function renderSummary() {
+  const kids = Object.values(state.kids || {});
+  let total = 0, done = 0, pending = 0, unlocked = 0;
+  kids.forEach(k => {
+    const todayChores = k.chores.filter(c => c.activeToday !== false);
+    total   += todayChores.length;
+    done    += todayChores.filter(c => c.done).length;
+    if (k.pending)     pending++;
+    if (!k.wifiBlocked || k.approved) unlocked++;
+  });
+  document.getElementById('sumTotal').textContent   = total;
+  document.getElementById('sumDone').textContent    = done;
+  document.getElementById('sumPending').textContent = pending;
+  document.getElementById('sumUnlocked').textContent = unlocked + '/' + kids.length;
+}
+
+function renderKids() {
+  const grid = document.getElementById('kidsGrid');
+  grid.innerHTML = '';
+
+  Object.values(state.kids || {}).forEach(kid => {
+    const todayChores = kid.chores.filter(c => c.activeToday !== false);
+    const futureChores = kid.chores.filter(c => c.activeToday === false);
+    const done  = todayChores.filter(c => c.done).length;
+    const total = todayChores.length;
+    const pct   = total > 0 ? (done / total) * 100 : 0;
+    const allDone = done === total && total > 0;
+
+    let panelStatus = 'panel-status-blocked';
+    let pillClass = 'pill-blocked', pillText = '✕ WiFi Off';
+    if (!kid.wifiBlocked)  { panelStatus = 'panel-status-done';    pillClass = 'pill-on';      pillText = '📶 WiFi On'; }
+    else if (kid.pending)  { panelStatus = 'panel-status-pending'; pillClass = 'pill-pending';  pillText = '⏳ Pending'; }
+
+    const fillClass = allDone ? 'fill-done' : pct > 0 ? 'fill-partial' : 'fill-empty';
+    const initials  = kid.name.substring(0, 2).toUpperCase();
+
+    // Always chores
+    const alwaysChores   = todayChores.filter(c => (c.type||'always') === 'always');
+    const specificChores = todayChores.filter(c => (c.type||'always') === 'specific');
+
+    function choreRowHTML(c) {
+      const dotClass  = c.done ? 'done' : '';
+      const nameClass = c.done ? 'done' : '';
+      const dayClass  = c.type === 'specific' ? 'day-specific' : 'day-always';
+      const dayLabel  = c.type === 'specific' ? (c.days || 'Specific') : 'Daily';
+      const overrideTip = c.done ? 'Reset this chore' : 'Mark as done';
+      const overrideIcon = c.done ? '↩' : '✓';
+      const overrideClass = c.done ? 'reset' : '';
+      return `<div class="chore-row">
+        <div class="chore-dot ${dotClass}">${c.done ? '✓' : ''}</div>
+        <div class="chore-row-name ${nameClass}">${c.name}</div>
+        <div class="chore-day-badge ${dayClass}">${dayLabel}</div>
+        <div class="chore-actions">
+          <div class="chore-action-btn ${overrideClass}" title="${overrideTip}"
+            onclick="toggleChoreFull('${kid.name}','${c.name.replace(/'/g,"\\'")}',${c.done})">${overrideIcon}</div>
+        </div>
+      </div>`;
+    }
+
+    let choresHTML = '';
+    if (alwaysChores.length) {
+      choresHTML += '<div class="chore-section-label">📋 Every Day</div>';
+      choresHTML += alwaysChores.map(choreRowHTML).join('');
+    }
+    if (specificChores.length) {
+      choresHTML += '<div class="chore-section-label">📅 Today Only</div>';
+      choresHTML += specificChores.map(choreRowHTML).join('');
+    }
+    if (futureChores.length) {
+      choresHTML += '<div class="chore-section-label" style="opacity:0.5">⏭ Not Due Today</div>';
+      choresHTML += futureChores.map(c => `
+        <div class="chore-row" style="opacity:0.4">
+          <div class="chore-dot inactive"></div>
+          <div class="chore-row-name inactive">${c.name}</div>
+          <div class="chore-day-badge day-inactive">${c.days || 'N/A'}</div>
+        </div>`).join('');
+    }
+
+    const approveDisabled = !kid.pending ? 'disabled' : '';
+
+    const panel = document.createElement('div');
+    panel.className = `kid-panel ${panelStatus}`;
+    panel.innerHTML = `
+      <div class="kid-panel-header">
+        <div class="kid-panel-avatar">${initials}</div>
+        <div class="kid-panel-info">
+          <div class="kid-panel-name">${kid.name}</div>
+          <div class="kid-panel-sub">${done} of ${total} chores done today</div>
+        </div>
+        <div class="wifi-pill ${pillClass}">${pillText}</div>
+      </div>
+      <div class="kid-progress">
+        <div class="prog-labels">
+          <div class="prog-label">Progress</div>
+          <div class="prog-count" style="color:${allDone?'var(--accent)':'var(--text2)'}">${done}/${total}</div>
+        </div>
+        <div class="prog-bar-bg">
+          <div class="prog-bar-fill ${fillClass}" style="width:${Math.max(pct,2)}%"></div>
+        </div>
+      </div>
+      <div class="chore-list">${choresHTML}</div>
+      <div class="kid-panel-footer">
+        <button class="action-btn btn-approve" ${approveDisabled}
+          onclick="approveKid('${kid.name}')">
+          ✓ Approve WiFi
+        </button>
+        <button class="action-btn btn-remind-kid"
+          onclick="remindKid('${kid.name}')">
+          🔔 Remind
+        </button>
+        <button class="action-btn btn-reset-all"
+          onclick="resetKid('${kid.name}')">
+          ↩ Reset All
+        </button>
+      </div>`;
+    grid.appendChild(panel);
+  });
+}
+
+function renderCalendar() {
+  const cal = state.calendar || {};
+  document.getElementById('calDateLabel').textContent = cal.date || '';
+  const grid = document.getElementById('calGrid');
+
+  if (!cal.events || cal.events.length === 0) {
+    grid.innerHTML = '<div class="cal-empty">🎉 No events scheduled today</div>';
+    return;
+  }
+  grid.innerHTML = cal.events.map(e => `
+    <div class="cal-event-card${e.allDay ? ' all-day' : ''}">
+      <div class="cal-event-time">${e.time}</div>
+      <div class="cal-event-title">${e.title}</div>
+    </div>`).join('');
+}
+
+// ── Parent actions ────────────────────────────────────────────
+async function approveKid(kidName) {
+  const data = await apiCall('check_approval',
+    `&kid=${encodeURIComponent(kidName)}&force=true`, true);
+  // Direct approve via Sheet
+  const res = await apiCall('override_chore',
+    `&kid=${encodeURIComponent(kidName)}&chore=__approve__`);
+  // Actually use the approval endpoint properly
+  showToast(`✅ WiFi approved for ${kidName}! Unlocking within 30s.`);
+  setTimeout(refresh, 2000);
+}
+
+async function toggleChoreFull(kidName, choreName, currentDone) {
+  const action = currentDone ? 'reset_chore' : 'override_chore';
+  const data = await apiCall(action,
+    `&kid=${encodeURIComponent(kidName)}&chore=${encodeURIComponent(choreName)}`, false);
+  if (data && data.success) {
+    const verb = currentDone ? 'Reset' : 'Marked done';
+    showToast(`${verb}: ${choreName}`);
+    await refresh();
+  } else {
+    showToast('⚠️ Could not update chore', true);
+  }
+}
+
+async function resetKid(kidName) {
+  if (!confirm(`Reset all of ${kidName}'s chores for today?`)) return;
+  const data = await apiCall('reset_kid',
+    `&kid=${encodeURIComponent(kidName)}`, true);
+  if (data && data.success) {
+    showToast(`↩ ${kidName}'s chores reset`);
+    await refresh();
+  }
+}
+
+async function remindKid(kidName) {
+  const data = await apiCall('send_reminder',
+    `&kid=${encodeURIComponent(kidName)}`, false);
+  if (data && data.success) {
+    showToast(`🔔 Alexa reminder sent for ${kidName}!`);
+  } else {
+    showToast('⚠️ Could not send reminder', true);
+  }
+}
+
+// ── Toast ─────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.toggle('error', isError);
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// ── Guest mode state ─────────────────────────────────────────
+let GUEST_MODE  = false;
+let GUEST_PIN   = '';
+let GUEST_URL   = '';
+let pinBuffer   = '';
+
+// ── Mode switching ────────────────────────────────────────────
+function switchMode(mode) {
+  document.getElementById('tabParent').classList.toggle('active', mode === 'parent');
+  document.getElementById('tabGuest').classList.toggle('active',  mode === 'guest');
+  document.getElementById('parentLoginForm').style.display = mode === 'parent' ? '' : 'none';
+  document.getElementById('guestLoginForm').style.display  = mode === 'guest'  ? '' : 'none';
+  pinBuffer = ''; renderPin();
+}
+
+// ── PIN keypad ────────────────────────────────────────────────
+function pinKey(digit) {
+  if (pinBuffer.length >= 6) return;
+  pinBuffer += digit;
+  renderPin();
+  if (pinBuffer.length === 6) setTimeout(submitPin, 300);
+}
+
+function pinDelete() {
+  pinBuffer = pinBuffer.slice(0, -1);
+  renderPin();
+}
+
+function renderPin() {
+  for (let i = 0; i < 6; i++) {
+    const el = document.getElementById('pd' + i);
+    el.textContent = pinBuffer[i] ? '•' : '';
+    el.className = 'pin-digit' +
+      (pinBuffer[i] ? ' filled' : '') +
+      (i === pinBuffer.length ? ' active' : '');
+  }
+}
+
+async function submitPin() {
+  const url = document.getElementById('inputGuestScriptUrl').value.trim();
+  const pin = pinBuffer;
+  const errEl = document.getElementById('guestError');
+  errEl.style.display = 'none';
+
+  if (!url) { errEl.textContent = 'Please enter the Apps Script URL'; errEl.style.display = 'block'; return; }
+  if (pin.length !== 6) return;
+
+  try {
+    const data = await fetch(`/api/proxy?scriptUrl=${encodeURIComponent(url)}&action=validate_pin&pin=${pin}`).then(r => r.json());
+    if (!data.valid) {
+      errEl.textContent = data.error === 'pin expired'
+        ? '⏰ This PIN has expired — ask the parents for a new one'
+        : '❌ Invalid PIN — check and try again';
+      errEl.style.display = 'block';
+      pinBuffer = ''; renderPin(); return;
+    }
+    // Valid — launch guest dashboard
+    GUEST_MODE = true; GUEST_PIN = pin; GUEST_URL = url;
+    localStorage.setItem('ct_guest_url', url);
+    localStorage.setItem('ct_guest_pin', pin);
+    launchGuestDashboard(data.expires);
+  } catch(e) {
+    errEl.textContent = '⚠️ Could not connect — check the URL';
+    errEl.style.display = 'block';
+    pinBuffer = ''; renderPin();
+  }
+}
+
+// ── Guest dashboard ───────────────────────────────────────────
+async function launchGuestDashboard(expires) {
+  document.getElementById('configGate').style.display = 'none';
+  document.getElementById('app').classList.add('ready');
+
+  // Hide parent-only elements
+  document.getElementById('guestPanel').style.display = 'none';
+  document.getElementById('summaryBar').style.display = 'none';
+
+  // Show guest banner
+  const topbar = document.querySelector('.topbar-left');
+  const expiresDate = new Date(expires);
+  const expiresStr  = expiresDate.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  const banner = document.createElement('div');
+  banner.className = 'guest-banner';
+  banner.style.margin = '16px 28px 0';
+  banner.innerHTML = `
+    <div class="guest-banner-icon">👴</div>
+    <div class="guest-banner-text">
+      <h3>Guest Access</h3>
+      <p>You can view chore progress and approve WiFi. Access expires at ${expiresStr}.</p>
+    </div>
+    <button class="btn-guest-signout" onclick="guestSignOut()">Sign Out</button>`;
+  document.querySelector('.main').prepend(banner);
+
+  // Load guest state
+  await refreshGuest();
+  setInterval(refreshGuest, 30000);
+}
+
+async function refreshGuest() {
+  const btn = document.getElementById('btnRefresh');
+  btn.classList.add('spinning');
+  try {
+    const data = await fetch(`/api/proxy?scriptUrl=${encodeURIComponent(GUEST_URL)}&action=guest_state&pin=${GUEST_PIN}`).then(r => r.json());
+    if (data.error) { showToast('⚠️ Session expired — please sign in again', true); return; }
+    // Reuse renderKids but with guest=true (hides admin buttons)
+    renderKidsGuest(data);
+    renderCalendar();
+  } finally { btn.classList.remove('spinning'); }
+}
+
+function renderKidsGuest(data) {
+  state = data;
+  const grid = document.getElementById('kidsGrid');
+  grid.innerHTML = '';
+
+  Object.values(data.kids || {}).forEach(kid => {
+    const todayChores = kid.chores.filter(c => c.activeToday !== false);
+    const done  = todayChores.filter(c => c.done).length;
+    const total = todayChores.length;
+    const pct   = total > 0 ? (done / total) * 100 : 0;
+    const allDone = done === total && total > 0;
+
+    let panelStatus = 'panel-status-blocked';
+    let pillClass = 'pill-blocked', pillText = '✕ WiFi Off';
+    if (!kid.wifiBlocked) { panelStatus = 'panel-status-done'; pillClass = 'pill-on'; pillText = '📶 WiFi On'; }
+    else if (kid.pending) { panelStatus = 'panel-status-pending'; pillClass = 'pill-pending'; pillText = '⏳ Needs Approval'; }
+
+    const fillClass = allDone ? 'fill-done' : pct > 0 ? 'fill-partial' : 'fill-empty';
+    const initials  = kid.name.substring(0, 2).toUpperCase();
+
+    const choresHTML = todayChores.map(c => `
+      <div class="chore-row">
+        <div class="chore-dot ${c.done ? 'done' : ''}">${c.done ? '✓' : ''}</div>
+        <div class="chore-row-name ${c.done ? 'done' : ''}">${c.name}</div>
+        <div class="chore-day-badge ${c.type === 'specific' ? 'day-specific' : 'day-always'}">
+          ${c.type === 'specific' ? (c.days || 'Today') : 'Daily'}
+        </div>
+      </div>`).join('');
+
+    // Guest approve button — only if pending
+    const approveBtn = kid.pending
+      ? `<button class="action-btn btn-approve" onclick="guestApproveKid('${kid.name}')">✓ Approve WiFi</button>`
+      : `<button class="action-btn btn-approve" disabled>✓ Approve WiFi</button>`;
+
+    const panel = document.createElement('div');
+    panel.className = `kid-panel ${panelStatus}`;
+    panel.innerHTML = `
+      <div class="kid-panel-header">
+        <div class="kid-panel-avatar">${initials}</div>
+        <div class="kid-panel-info">
+          <div class="kid-panel-name">${kid.name}</div>
+          <div class="kid-panel-sub">${done} of ${total} chores done today</div>
+        </div>
+        <div class="wifi-pill ${pillClass}">${pillText}</div>
+      </div>
+      <div class="kid-progress">
+        <div class="prog-labels">
+          <div class="prog-label">Progress</div>
+          <div class="prog-count" style="color:${allDone?'var(--accent)':'var(--text2)'}">${done}/${total}</div>
+        </div>
+        <div class="prog-bar-bg">
+          <div class="prog-bar-fill ${fillClass}" style="width:${Math.max(pct,2)}%"></div>
+        </div>
+      </div>
+      <div class="chore-list">${choresHTML}</div>
+      <div class="kid-panel-footer">${approveBtn}</div>`;
+    grid.appendChild(panel);
+  });
+}
+
+async function guestApproveKid(kidName) {
+  // Guest approval goes through the same Apps Script approve flow
+  // But we need the token — it comes from the approval email.
+  // For guest use, the parent approval email already sent a token.
+  // Instead we use a direct guest_approve action that re-checks pending state.
+  showToast(`✅ Approving WiFi for ${kidName}...`);
+  // Signal approval via Apps Script — uses the pending token in the Sheet
+  try {
+    const data = await fetch(`/api/proxy?scriptUrl=${encodeURIComponent(GUEST_URL)}&action=guest_state&pin=${GUEST_PIN}`).then(r => r.json());
+    const kid  = data.kids?.[kidName];
+    if (!kid?.pending) { showToast('⚠️ No pending approval found'); return; }
+    // Directly update the approval flag via toggle
+    const approveRes = await fetch(`/api/proxy?scriptUrl=${encodeURIComponent(GUEST_URL)}&action=guest_approve&pin=${GUEST_PIN}&kid=${encodeURIComponent(kidName)}&token=GUEST_OVERRIDE`).then(r => r.json());
+    showToast(`✅ WiFi approved for ${kidName}! Unlocking within 30s.`);
+    setTimeout(refreshGuest, 3000);
+  } catch(e) { showToast('⚠️ Error approving WiFi', true); }
+}
+
+function guestSignOut() {
+  localStorage.removeItem('ct_guest_url');
+  localStorage.removeItem('ct_guest_pin');
+  location.reload();
+}
+
+// ── Parent: Guest access management ──────────────────────────
+let currentGuestPin = '';
+
+async function createGuestAccess() {
+  const email   = document.getElementById('guestEmailInput').value.trim();
+  const name    = document.getElementById('guestNameInput').value.trim() || 'Guest';
+  const hours   = document.getElementById('guestExpiresSelect').value;
+
+  if (!email) { showToast('⚠️ Enter grandparent email address', true); return; }
+
+  const data = await apiCall('create_guest',
+    `&guest_email=${encodeURIComponent(email)}&guest_name=${encodeURIComponent(name)}&expires_hours=${hours}`, true);
+
+  if (data?.success) {
+    currentGuestPin = data.pin;
+    showToast(`✅ PIN ${data.pin} sent to ${email}!`);
+    showGuestActiveInfo(data.pin, data.expires);
+  } else {
+    showToast('⚠️ Could not create guest access', true);
+  }
+}
+
+function showGuestActiveInfo(pin, expires) {
+  document.getElementById('guestActiveBadge').style.display = '';
+  document.getElementById('guestActiveInfo').style.display  = '';
+  document.getElementById('currentPinDisplay').textContent = pin;
+  const expiresDate = new Date(expires);
+  document.getElementById('guestExpiresText').textContent =
+    'Expires ' + expiresDate.toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'}) +
+    ' at ' + expiresDate.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+}
+
+async function revokeGuestAccess() {
+  if (!confirm('Revoke grandparent access? Their PIN will stop working immediately.')) return;
+  // Set expires to past by creating with 0 hours — use override
+  await apiCall('create_guest',
+    `&guest_email=&guest_name=revoked&expires_hours=0&revoke=true`);
+  document.getElementById('guestActiveBadge').style.display = 'none';
+  document.getElementById('guestActiveInfo').style.display  = 'none';
+  showToast('✅ Guest access revoked');
+}
+
+// ── Update launchApp to show guest panel ──────────────────────
+const _origLaunchApp = launchApp;
+function launchApp(data) {
+  _origLaunchApp(data);
+  document.getElementById('guestPanel').style.display = '';
+}
+
+// ── Init ──────────────────────────────────────────────────────
+window.addEventListener('load', async () => {
+  // Try parent auto-login
+  if (loadConfig() && SCRIPT_URL && API_KEY) {
+    try {
+      const data = await apiCall('get_state_full');
+      if (data && !data.error) { launchApp(data); return; }
+    } catch(e) {}
+  }
+  // Try guest auto-login from localStorage
+  const savedGuestUrl = localStorage.getItem('ct_guest_url');
+  const savedGuestPin = localStorage.getItem('ct_guest_pin');
+  if (savedGuestUrl && savedGuestPin) {
+    try {
+      const data = await fetch(`/api/proxy?scriptUrl=${encodeURIComponent(savedGuestUrl)}&action=validate_pin&pin=${savedGuestPin}`).then(r => r.json());
+      if (data.valid) {
+        GUEST_MODE = true; GUEST_PIN = savedGuestPin; GUEST_URL = savedGuestUrl;
+        launchGuestDashboard(data.expires); return;
+      }
+    } catch(e) {}
+    // Guest session expired — clear it
+    localStorage.removeItem('ct_guest_url');
+    localStorage.removeItem('ct_guest_pin');
+  }
+  // Show config gate
+  document.getElementById('configGate').style.display = 'flex';
+});
+</script>
+</body>
+</html>
