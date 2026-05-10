@@ -125,6 +125,59 @@ body {
 .pin-key.zero   { grid-column: 2; }
 .pin-expires { font-size: 12px; color: var(--muted); text-align: center; }
 
+/* ── Extra chore panel ── */
+.extra-chore-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 28px;
+}
+.extra-chore-title {
+  font-size: 16px; font-weight: 900;
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 18px;
+}
+.extra-chore-form {
+  display: grid;
+  grid-template-columns: 1fr 2fr auto;
+  gap: 12px; align-items: end;
+}
+.extra-chore-badge {
+  font-size: 10px; font-weight: 800; padding: 3px 8px;
+  background: rgba(255,181,71,0.15); color: var(--warn);
+  border-radius: 20px; letter-spacing: 0.05em; text-transform: uppercase;
+}
+.btn-assign {
+  padding: 11px 20px;
+  background: linear-gradient(135deg, var(--warn), #FF8C00);
+  color: #1a0a00; border: none; border-radius: 10px;
+  font-size: 14px; font-weight: 800; cursor: pointer;
+  font-family: "Nunito", sans-serif; white-space: nowrap;
+  transition: opacity 0.15s;
+}
+.btn-assign:hover { opacity: 0.9; }
+.extra-chore-list {
+  margin-top: 16px; display: flex; flex-direction: column; gap: 8px;
+}
+.extra-chore-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; background: rgba(255,181,71,0.08);
+  border: 1px solid rgba(255,181,71,0.25); border-radius: 10px;
+}
+.extra-chore-kid {
+  font-size: 13px; font-weight: 800; color: var(--warn); min-width: 70px;
+}
+.extra-chore-name { font-size: 14px; font-weight: 600; flex: 1; }
+.btn-remove-extra {
+  padding: 5px 12px; background: rgba(255,91,107,0.1);
+  color: var(--red); border: 1px solid rgba(255,91,107,0.25);
+  border-radius: 8px; font-size: 12px; font-weight: 700;
+  cursor: pointer; font-family: "Nunito", sans-serif;
+  transition: background 0.15s;
+}
+.btn-remove-extra:hover { background: rgba(255,91,107,0.2); }
+
 /* ── Guest create panel (in parent dashboard) ── */
 .guest-panel {
   background: var(--surface);
@@ -597,6 +650,30 @@ body {
       </div>
     </div>
 
+    <!-- Extra Chore Panel (parent only) -->
+    <div id="extraChorePanel" class="extra-chore-panel" style="display:none">
+      <div class="extra-chore-title">
+        ➕ Assign Extra Chore
+        <span class="extra-chore-badge">One-off</span>
+      </div>
+      <div class="extra-chore-form">
+        <div class="form-group">
+          <div class="form-label">Kid</div>
+          <select class="form-select" id="extraChoreKid"></select>
+        </div>
+        <div class="form-group">
+          <div class="form-label">Chore</div>
+          <input class="form-input" id="extraChoreName" type="text"
+            placeholder="e.g. Unload dishwasher"
+            onkeydown="if(event.key==='Enter') assignExtraChore()">
+        </div>
+        <button class="btn-assign" onclick="assignExtraChore()">
+          ➕ Assign
+        </button>
+      </div>
+      <div class="extra-chore-list" id="extraChoreList"></div>
+    </div>
+
     <!-- Guest Access Panel (parent only) -->
     <div id="guestPanel" class="guest-panel" style="display:none">
       <div class="guest-panel-header">
@@ -708,6 +785,7 @@ function launchApp(initialData) {
   document.getElementById('configGate').style.display = 'none';
   document.getElementById('app').classList.add('ready');
   document.getElementById('guestPanel').style.display = '';
+  document.getElementById('extraChorePanel').style.display = '';
   applyState(initialData);
   startPolling();
 }
@@ -765,6 +843,72 @@ function applyState(data) {
   renderSummary();
   renderKids();
   renderCalendar();
+  updateExtraChoreKidDropdown();
+  updateExtraChoreList();
+}
+
+// ── Extra chore management ────────────────────────────────────
+function updateExtraChoreKidDropdown() {
+  const sel = document.getElementById('extraChoreKid');
+  if (!sel) return;
+  const kids = Object.values(state.kids || {});
+  sel.innerHTML = kids.map(k =>
+    `<option value="${k.name}">${k.name}</option>`
+  ).join('');
+}
+
+function updateExtraChoreList() {
+  const list = document.getElementById('extraChoreList');
+  if (!list) return;
+  const kids = Object.values(state.kids || {});
+  const extras = [];
+  kids.forEach(k => {
+    (k.chores || []).forEach(c => {
+      if ((c.type || '').toLowerCase() === 'extra') {
+        extras.push({ kid: k.name, chore: c.name, done: c.done });
+      }
+    });
+  });
+  if (extras.length === 0) { list.innerHTML = ''; return; }
+  list.innerHTML = extras.map(e => `
+    <div class="extra-chore-item">
+      <div class="extra-chore-kid">${e.kid}</div>
+      <div class="extra-chore-name" style="${e.done?'text-decoration:line-through;opacity:0.5':''}">
+        ${e.chore}${e.done ? ' ✓' : ''}
+      </div>
+      <button class="btn-remove-extra"
+        onclick="removeExtraChore('${e.kid}','${e.chore.replace(/'/g,"\\'")}')">
+        Remove
+      </button>
+    </div>`).join('');
+}
+
+async function assignExtraChore() {
+  const kid   = document.getElementById('extraChoreKid').value;
+  const chore = document.getElementById('extraChoreName').value.trim();
+  if (!kid || !chore) { showToast('⚠️ Enter a chore name', true); return; }
+
+  const data = await apiCall('assign_extra_chore',
+    `&kid=${encodeURIComponent(kid)}&chore=${encodeURIComponent(chore)}`, true);
+
+  if (data?.success) {
+    document.getElementById('extraChoreName').value = '';
+    showToast(`➕ "${chore}" assigned to ${kid} — WiFi blocked until done!`);
+    await refresh();
+  } else {
+    showToast('⚠️ ' + (data?.error || 'Could not assign chore'), true);
+  }
+}
+
+async function removeExtraChore(kid, chore) {
+  const data = await apiCall('remove_extra_chore',
+    `&kid=${encodeURIComponent(kid)}&chore=${encodeURIComponent(chore)}`, false);
+  if (data?.success) {
+    showToast(`✓ Removed "${chore}" from ${kid}`);
+    await refresh();
+  } else {
+    showToast('⚠️ Could not remove chore', true);
+  }
 }
 
 function renderSummary() {
